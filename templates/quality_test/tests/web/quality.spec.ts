@@ -11,7 +11,9 @@ test.describe("Web Quality", () => {
     const failedRequests: string[] = [];
 
     page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
+      if (message.type() === "error") {
+        consoleErrors.push(message.text());
+      }
     });
     page.on("requestfailed", (request) => {
       failedRequests.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || "unknown"}`);
@@ -21,7 +23,9 @@ test.describe("Web Quality", () => {
     await expect(page.locator("body")).toBeVisible();
 
     const axeResults = await new AxeBuilder({ page }).include("body").withTags(["wcag2a", "wcag2aa"]).analyze();
-    const seriousViolations = axeResults.violations.filter((violation) => ["critical", "serious"].includes(violation.impact || ""));
+    const seriousViolations = axeResults.violations.filter((violation) =>
+      ["critical", "serious"].includes(violation.impact || "")
+    );
     const metrics = await page.evaluate(() => {
       const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
       return {
@@ -41,7 +45,9 @@ test.describe("Web Quality", () => {
     expect(seriousViolations).toEqual([]);
     expect(consoleErrors.length).toBeLessThanOrEqual(config.web.maxConsoleErrors ?? 0);
     expect(failedRequests.length).toBeLessThanOrEqual(config.web.maxFailedRequests ?? 0);
-    expect(metrics.pageWidth).toBeLessThanOrEqual(metrics.viewportWidth + (config.web.maxHorizontalOverflowPx ?? 2));
+    expect(metrics.pageWidth).toBeLessThanOrEqual(
+      metrics.viewportWidth + (config.web.maxHorizontalOverflowPx ?? 2)
+    );
     expect(metrics.domContentLoadedMs).toBeLessThan(config.web.budgets?.domContentLoadedMs ?? 8000);
     expect(metrics.loadCompleteMs).toBeLessThan(config.web.budgets?.loadCompleteMs ?? 12000);
     expect(metrics.resourceCount).toBeLessThan(config.web.budgets?.resourceCount ?? 120);

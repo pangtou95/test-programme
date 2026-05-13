@@ -1,6 +1,6 @@
 # quality_test 通用质量测试工程
 
-这是由 `universal-quality-gate` 生成的产品级质量测试模板，支持 Web/浏览器、桌面 App、移动 App、E2E、并发、压测和 CI 门禁。
+这是由 `test-programme` 生成的产品级质量测试模板，支持 Web/浏览器、桌面 App、移动 App、E2E、并发、压测和 CI 门禁。
 
 ## 快速开始
 
@@ -24,7 +24,16 @@ npm run quality:system
 
 ## App 测试
 
-App 测试采用适配器协议，不强绑定某个生态。你可以使用 Maestro、Detox、Appium、xcodebuild、Playwright Electron 或任意 custom command。
+App 测试采用适配器协议，不强绑定某个生态。你可以使用：
+
+- Maestro
+- Detox
+- Appium
+- xcodebuild
+- Playwright Electron
+- 任意 custom command
+
+只要在 `quality-test.config.json` 中配置：
 
 ```json
 {
@@ -36,6 +45,8 @@ App 测试采用适配器协议，不强绑定某个生态。你可以使用 Mae
         "platform": "ios",
         "driver": "maestro",
         "doctorCommand": "npx maestro --version",
+        "installCommand": "",
+        "startCommand": "",
         "testCommand": "npx maestro test e2e/maestro"
       }
     ]
@@ -43,14 +54,40 @@ App 测试采用适配器协议，不强绑定某个生态。你可以使用 Mae
 }
 ```
 
+`test-programme app` 会执行这些命令并生成 `artifacts/app-summary.md`。
+
 ## 压测
 
-`quality-test load` 默认运行 smoke profile，检查成功率、错误率、RPS、P95、P99。
+`test-programme load` 默认运行 smoke profile，检查成功率、错误率、RPS、P95、P99。
 
 真实环境压测：
 
 ```bash
-LOAD_TEST_BASE_URL=https://your-domain.com quality-test load
+LOAD_TEST_BASE_URL=https://your-domain.com test-programme load
+```
+
+更高压力：
+
+```bash
+LOAD_TEST_CONCURRENCY=50 LOAD_TEST_DURATION=60 test-programme load
 ```
 
 不要对不属于你的第三方服务运行压测。
+
+## 产物
+
+- `artifacts/quality-system-summary.md`
+- `artifacts/quality-summary.md`
+- `artifacts/app-summary.md`
+- `artifacts/load-summary.md`
+- `artifacts/results.json`
+- `artifacts/junit.xml`
+- `artifacts/playwright-report/index.html`
+
+## 维护原则
+
+- Web 功能流程写 Playwright 测试。
+- Native App 测试用 app adapter command 接入。
+- HTTP 压测只压自己拥有或获准测试的服务。
+- CI 默认跑 `test-programme system`。
+- 对真实外部环境测试使用显式环境变量，不要混进默认 mock-first 门禁。

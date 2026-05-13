@@ -18,7 +18,11 @@ for (const step of steps) {
     stdio: "inherit",
     shell: process.platform === "win32",
   });
-  results.push({ ...step, exitCode: result.status ?? 1, durationSeconds: (Date.now() - startedAt) / 1000 });
+  results.push({
+    ...step,
+    exitCode: result.status ?? 1,
+    durationSeconds: (Date.now() - startedAt) / 1000,
+  });
 }
 
 const status = results.every((result) => result.exitCode === 0) ? "passed" : "failed";

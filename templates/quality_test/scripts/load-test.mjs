@@ -1,11 +1,16 @@
 import { spawn } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { artifactsDir, readConfig, workspaceRoot } from "./config.mjs";
 
 function parseArgs(argv) {
-  const parsed = { profile: "smoke", baseUrl: process.env.LOAD_TEST_BASE_URL || "" };
+  const parsed = {
+    profile: "smoke",
+    baseUrl: process.env.LOAD_TEST_BASE_URL || "",
+    concurrency: Number(process.env.LOAD_TEST_CONCURRENCY || 0),
+    durationSeconds: Number(process.env.LOAD_TEST_DURATION || 0),
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--profile") {
@@ -35,21 +40,32 @@ function chooseEndpoint(endpoints) {
   return endpoints[endpoints.length - 1];
 }
 
-async function waitForTarget(baseUrl, timeoutMs = 10000) {
+async function waitForTarget(baseUrl, timeoutMs = 10_000) {
   const deadline = Date.now() + timeoutMs;
+  let lastError = null;
   while (Date.now() < deadline) {
     try {
       const response = await fetch(baseUrl, { signal: AbortSignal.timeout(1500) });
       if (response.ok) return;
-    } catch {}
+      lastError = new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      lastError = error;
+    }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  throw new Error(`Target did not become ready: ${baseUrl}`);
+  throw new Error(`Target did not become ready: ${baseUrl}. Last error: ${lastError?.message || "unknown"}`);
 }
 
 async function startServer(loadConfig, baseUrl) {
-  if (!loadConfig.startCommand || process.env.LOAD_TEST_BASE_URL) return null;
-  const child = spawn(loadConfig.startCommand, { cwd: workspaceRoot, shell: true, stdio: ["ignore", "pipe", "pipe"] });
+  if (!loadConfig.startCommand || process.env.LOAD_TEST_BASE_URL) {
+    return null;
+  }
+
+  const child = spawn(loadConfig.startCommand, {
+    cwd: workspaceRoot,
+    shell: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   await waitForTarget(baseUrl);
   return child;
 }
@@ -57,11 +73,26 @@ async function startServer(loadConfig, baseUrl) {
 async function runRequest(baseUrl, endpoint, timeoutMs) {
   const startedAt = performance.now();
   try {
-    const response = await fetch(new URL(endpoint.path, baseUrl), { method: endpoint.method, signal: AbortSignal.timeout(timeoutMs) });
+    const response = await fetch(new URL(endpoint.path, baseUrl), {
+      method: endpoint.method,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
     await response.arrayBuffer();
-    return { ok: response.ok, status: response.status, durationMs: performance.now() - startedAt, error: response.ok ? "" : `HTTP ${response.status}` };
+    return {
+      endpoint: endpoint.name,
+      ok: response.ok,
+      status: response.status,
+      durationMs: performance.now() - startedAt,
+      error: response.ok ? "" : `HTTP ${response.status}`,
+    };
   } catch (error) {
-    return { ok: false, status: 0, durationMs: performance.now() - startedAt, error: error.message || "request failed" };
+    return {
+      endpoint: endpoint.name,
+      ok: false,
+      status: 0,
+      durationMs: performance.now() - startedAt,
+      error: error.message || "request failed",
+    };
   }
 }
 
@@ -71,7 +102,9 @@ async function runLoad({ baseUrl, endpoints, profile }) {
   async function worker() {
     while (Date.now() < deadline) {
       results.push(await runRequest(baseUrl, chooseEndpoint(endpoints), profile.requestTimeoutMs));
-      if (profile.paceMs) await new Promise((resolve) => setTimeout(resolve, profile.paceMs));
+      if (profile.paceMs) {
+        await new Promise((resolve) => setTimeout(resolve, profile.paceMs));
+      }
     }
   }
   const startedAt = performance.now();
@@ -86,6 +119,8 @@ function summarize({ profileName, profile, baseUrl, durationMs, results }) {
     profile: profileName,
     baseUrl,
     totalRequests: results.length,
+    successfulRequests: successful.length,
+    failedRequests: results.length - successful.length,
     successRate: results.length ? successful.length / results.length : 0,
     errorRate: results.length ? (results.length - successful.length) / results.length : 1,
     requestsPerSecond: results.length / (durationMs / 1000),
@@ -100,13 +135,37 @@ function summarize({ profileName, profile, baseUrl, durationMs, results }) {
     { name: "p95Ms", actual: metrics.p95Ms, expected: profile.thresholds.p95Ms, passed: metrics.p95Ms <= profile.thresholds.p95Ms },
     { name: "p99Ms", actual: metrics.p99Ms, expected: profile.thresholds.p99Ms, passed: metrics.p99Ms <= profile.thresholds.p99Ms },
   ];
-  return { generatedAt: new Date().toISOString(), status: thresholds.every((threshold) => threshold.passed) ? "passed" : "failed", metrics, thresholds };
+  return {
+    generatedAt: new Date().toISOString(),
+    status: thresholds.every((threshold) => threshold.passed) ? "passed" : "failed",
+    metrics,
+    thresholds,
+  };
 }
 
 async function writeSummary(config, summary) {
   const dir = artifactsDir(config);
   const slug = summary.metrics.profile.replace(/[^a-z0-9_-]/gi, "-").toLowerCase();
-  const lines = ["# Load Test Summary", "", `- Generated: ${summary.generatedAt}`, `- Status: ${summary.status}`, `- Profile: ${summary.metrics.profile}`, `- Target: ${summary.metrics.baseUrl}`, `- Total requests: ${summary.metrics.totalRequests}`, `- Success rate: ${(summary.metrics.successRate * 100).toFixed(2)}%`, `- Error rate: ${(summary.metrics.errorRate * 100).toFixed(2)}%`, `- RPS: ${summary.metrics.requestsPerSecond.toFixed(2)}`, `- Avg: ${summary.metrics.avgMs.toFixed(1)}ms`, `- P95: ${summary.metrics.p95Ms.toFixed(1)}ms`, `- P99: ${summary.metrics.p99Ms.toFixed(1)}ms`, "", "## Thresholds", "", ...summary.thresholds.map((threshold) => `- ${threshold.passed ? "PASS" : "FAIL"} ${threshold.name}: actual=${Number(threshold.actual).toFixed(3)}, expected=${threshold.expected}`)];
+  const lines = [
+    "# Load Test Summary",
+    "",
+    `- Generated: ${summary.generatedAt}`,
+    `- Status: ${summary.status}`,
+    `- Profile: ${summary.metrics.profile}`,
+    `- Target: ${summary.metrics.baseUrl}`,
+    `- Total requests: ${summary.metrics.totalRequests}`,
+    `- Success rate: ${(summary.metrics.successRate * 100).toFixed(2)}%`,
+    `- Error rate: ${(summary.metrics.errorRate * 100).toFixed(2)}%`,
+    `- RPS: ${summary.metrics.requestsPerSecond.toFixed(2)}`,
+    `- Avg: ${summary.metrics.avgMs.toFixed(1)}ms`,
+    `- P95: ${summary.metrics.p95Ms.toFixed(1)}ms`,
+    `- P99: ${summary.metrics.p99Ms.toFixed(1)}ms`,
+    "",
+    "## Thresholds",
+    "",
+    ...summary.thresholds.map((threshold) => `- ${threshold.passed ? "PASS" : "FAIL"} ${threshold.name}: actual=${Number(threshold.actual).toFixed(3)}, expected=${threshold.expected}`),
+  ];
+
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, "load-summary.md"), `${lines.join("\n")}\n`, "utf8");
   await writeFile(path.join(dir, "load-results.json"), `${JSON.stringify(summary, null, 2)}\n`, "utf8");
@@ -118,14 +177,23 @@ async function writeSummary(config, summary) {
 const config = await readConfig();
 const args = parseArgs(process.argv.slice(2));
 const profile = config.load.profiles[args.profile];
-if (!profile) throw new Error(`Unknown load profile "${args.profile}"`);
+if (!profile) {
+  throw new Error(`Unknown load profile "${args.profile}"`);
+}
+
+const effectiveProfile = {
+  ...profile,
+  concurrency: args.concurrency || profile.concurrency,
+  durationSeconds: args.durationSeconds || profile.durationSeconds,
+};
 const baseUrl = args.baseUrl || config.load.baseUrl;
+
 let server = null;
 try {
   server = await startServer(config.load, baseUrl);
   await waitForTarget(baseUrl);
-  const run = await runLoad({ baseUrl, endpoints: config.load.endpoints, profile });
-  const summary = summarize({ profileName: args.profile, profile, baseUrl, ...run });
+  const run = await runLoad({ baseUrl, endpoints: config.load.endpoints, profile: effectiveProfile });
+  const summary = summarize({ profileName: args.profile, profile: effectiveProfile, baseUrl, ...run });
   await writeSummary(config, summary);
   process.exit(summary.status === "passed" ? 0 : 1);
 } finally {

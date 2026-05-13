@@ -23,7 +23,11 @@ test.describe("Browser Concurrency", () => {
         try {
           await page.goto(baseURL);
           await expect(page.locator("body")).toBeVisible();
-          return { index, title: await page.title(), consoleErrors };
+          return {
+            index,
+            title: await page.title(),
+            consoleErrors,
+          };
         } finally {
           await context.close();
         }

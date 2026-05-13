@@ -24,19 +24,27 @@ function parseArgs(argv) {
       parsed.passthrough.push(arg);
     }
   }
-  if (!suites[parsed.suite]) throw new Error(`Unknown suite ${parsed.suite}`);
+  if (!suites[parsed.suite]) {
+    throw new Error(`Unknown suite ${parsed.suite}`);
+  }
   return parsed;
 }
 
 function run(command, args) {
-  const result = spawnSync(command, args, { cwd: workspaceRoot, stdio: "inherit", shell: process.platform === "win32" });
+  const result = spawnSync(command, args, {
+    cwd: workspaceRoot,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
   return result.status ?? 1;
 }
 
 function collectStats(parsed) {
   const stats = { total: 0, passed: 0, skipped: 0, flaky: 0, failed: 0 };
   function visitSuite(node) {
-    for (const child of node.suites || []) visitSuite(child);
+    for (const child of node.suites || []) {
+      visitSuite(child);
+    }
     for (const spec of node.specs || []) {
       for (const test of spec.tests || []) {
         stats.total += 1;
@@ -47,7 +55,9 @@ function collectStats(parsed) {
       }
     }
   }
-  for (const suite of parsed.suites || []) visitSuite(suite);
+  for (const suite of parsed.suites || []) {
+    visitSuite(suite);
+  }
   return stats;
 }
 
@@ -55,10 +65,31 @@ async function writeSummary(config, suite, exitCode) {
   const dir = artifactsDir(config);
   const resultsPath = path.join(dir, "results.json");
   let stats = null;
-  try { stats = collectStats(JSON.parse(await readFile(resultsPath, "utf8"))); } catch {}
-  const lines = ["# Quality Gate Summary", "", `- Generated: ${new Date().toISOString()}`, `- Suite: ${suite}`, `- Status: ${exitCode === 0 ? "passed" : "failed"}`, `- Exit code: ${exitCode}`];
-  if (stats) lines.push(`- Total: ${stats.total}`, `- Passed: ${stats.passed}`, `- Skipped: ${stats.skipped}`, `- Flaky: ${stats.flaky}`, `- Failed: ${stats.failed}`);
+  try {
+    stats = collectStats(JSON.parse(await readFile(resultsPath, "utf8")));
+  } catch {
+    stats = null;
+  }
+
+  const lines = [
+    "# Quality Gate Summary",
+    "",
+    `- Generated: ${new Date().toISOString()}`,
+    `- Suite: ${suite}`,
+    `- Status: ${exitCode === 0 ? "passed" : "failed"}`,
+    `- Exit code: ${exitCode}`,
+  ];
+  if (stats) {
+    lines.push(
+      `- Total: ${stats.total}`,
+      `- Passed: ${stats.passed}`,
+      `- Skipped: ${stats.skipped}`,
+      `- Flaky: ${stats.flaky}`,
+      `- Failed: ${stats.failed}`
+    );
+  }
   lines.push("", "## Artifacts", "", "- `quality_test/artifacts/playwright-report/index.html`", "- `quality_test/artifacts/results.json`", "- `quality_test/artifacts/junit.xml`");
+
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, "quality-summary.md"), `${lines.join("\n")}\n`, "utf8");
 }
@@ -67,9 +98,19 @@ const config = await readConfig();
 const options = parseArgs(process.argv.slice(2));
 const dir = artifactsDir(config);
 await mkdir(dir, { recursive: true });
+
 const doctorExit = run("node", [path.join(qualityRoot, "scripts", "ensure-runtime.mjs")]);
-if (doctorExit !== 0) process.exit(doctorExit);
-const args = ["playwright", "test", `--config=${path.join(qualityRoot, "playwright.config.ts")}`, ...suites[options.suite], ...options.passthrough];
+if (doctorExit !== 0) {
+  process.exit(doctorExit);
+}
+
+const args = [
+  "playwright",
+  "test",
+  `--config=${path.join(qualityRoot, "playwright.config.ts")}`,
+  ...suites[options.suite],
+  ...options.passthrough,
+];
 const exitCode = run("npx", args);
 await writeSummary(config, options.suite, exitCode);
 process.exit(exitCode);
