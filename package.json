@@ -1,10 +1,19 @@
 {
-  "name": "universal-quality-gate",
+  "name": "test-programme",
   "version": "0.1.0",
-  "description": "Product-grade quality test system for Web, browser, desktop app, mobile app, E2E, concurrency, load, CI gates, and agent-friendly workflows.",
+  "description": "A product-grade quality engineering toolkit for Web, browser, desktop app, mobile app, E2E, concurrency, load testing, and CI release gates.",
   "type": "module",
   "bin": {
+    "test-programme": "./bin/quality-test.mjs",
     "quality-test": "./bin/quality-test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pangtou95/test-programme.git"
+  },
+  "homepage": "https://github.com/pangtou95/test-programme#readme",
+  "bugs": {
+    "url": "https://github.com/pangtou95/test-programme/issues"
   },
   "files": [
     "bin",
@@ -15,7 +24,8 @@
   ],
   "scripts": {
     "pack:check": "npm pack --dry-run",
-    "cli:help": "node ./bin/quality-test.mjs --help"
+    "cli:help": "node ./bin/quality-test.mjs --help",
+    "test": "node ./bin/quality-test.mjs --help"
   },
   "keywords": [
     "playwright",
@@ -25,7 +35,9 @@
     "concurrency",
     "mobile-app",
     "desktop-app",
-    "testing"
+    "testing",
+    "app-testing",
+    "web-testing"
   ],
   "license": "MIT",
   "engines": {
@@ -37,6 +49,7 @@
     "playwright": "^1.59.1"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   }
 }
