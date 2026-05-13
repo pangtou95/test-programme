@@ -1,0 +1,42 @@
+{
+  "name": "universal-quality-gate",
+  "version": "0.1.0",
+  "description": "Product-grade quality test system for Web, browser, desktop app, mobile app, E2E, concurrency, load, CI gates, and agent-friendly workflows.",
+  "type": "module",
+  "bin": {
+    "quality-test": "./bin/quality-test.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "pack:check": "npm pack --dry-run",
+    "cli:help": "node ./bin/quality-test.mjs --help"
+  },
+  "keywords": [
+    "playwright",
+    "e2e",
+    "quality-gate",
+    "load-test",
+    "concurrency",
+    "mobile-app",
+    "desktop-app",
+    "testing"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.11.3",
+    "@playwright/test": "^1.59.1",
+    "playwright": "^1.59.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
