@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Quality Test Config",
+  "type": "object",
+  "required": ["project", "web", "app", "load"],
+  "properties": {
+    "project": {
+      "type": "object",
+      "required": ["name", "artifactsDir"],
+      "properties": {
+        "name": { "type": "string" },
+        "artifactsDir": { "type": "string" }
+      }
+    },
+    "web": {
+      "type": "object",
+      "required": ["enabled", "baseURL"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "baseURL": { "type": "string" },
+        "startCommand": { "type": "string" },
+        "serverPort": { "type": "number" },
+        "reuseExistingServer": { "type": "boolean" },
+        "requiredText": { "type": "string" }
+      }
+    },
+    "app": {
+      "type": "object",
+      "required": ["enabled", "targets"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "targets": { "type": "array" }
+      }
+    },
+    "load": {
+      "type": "object",
+      "required": ["baseUrl", "endpoints", "profiles"],
+      "properties": {
+        "baseUrl": { "type": "string" },
+        "startCommand": { "type": "string" },
+        "serverPort": { "type": "number" },
+        "endpoints": { "type": "array" },
+        "profiles": { "type": "object" }
+      }
+    }
+  }
+}
