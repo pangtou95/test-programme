@@ -11,24 +11,24 @@ const packageRoot = path.resolve(__dirname, "..");
 const templateRoot = path.join(packageRoot, "templates", "quality_test");
 const cwd = process.cwd();
 
-const help = `quality-test
+const help = `test-programme
 
 通用质量测试体系 CLI，支持 Web/浏览器/App、E2E、并发、压测和 CI 门禁。
 
 Usage:
-  quality-test init [--dir quality_test] [--force]
-  quality-test doctor [--root quality_test]
-  quality-test e2e [--root quality_test] [-- ...playwright args]
-  quality-test load [--root quality_test] [--profile smoke|stress]
-  quality-test app [--root quality_test]
-  quality-test gate [--root quality_test]
-  quality-test system [--root quality_test]
-  quality-test summary [--root quality_test]
+  test-programme init [--dir quality_test] [--force]
+  test-programme doctor [--root quality_test]
+  test-programme e2e [--root quality_test] [-- ...playwright args]
+  test-programme load [--root quality_test] [--profile smoke|stress]
+  test-programme app [--root quality_test]
+  test-programme gate [--root quality_test]
+  test-programme system [--root quality_test]
+  test-programme summary [--root quality_test]
 
 Examples:
-  npx universal-quality-gate init
-  npx universal-quality-gate doctor
-  npx universal-quality-gate system
+  npx test-programme init
+  npx test-programme doctor
+  npx test-programme system
 `;
 
 function parseArgs(argv) {
@@ -79,7 +79,7 @@ function parseArgs(argv) {
 function runNode(root, script, args = []) {
   const scriptPath = path.resolve(cwd, root, "scripts", script);
   if (!existsSync(scriptPath)) {
-    console.error(`Cannot find ${scriptPath}. Run quality-test init first.`);
+    console.error(`Cannot find ${scriptPath}. Run test-programme init first.`);
     process.exit(1);
   }
 
@@ -110,20 +110,20 @@ async function initProject(options) {
     const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
     packageJson.scripts = {
       ...packageJson.scripts,
-      "quality:doctor": `quality-test doctor --root ${options.dir}`,
-      "quality:e2e": `quality-test e2e --root ${options.dir}`,
-      "quality:load": `quality-test load --root ${options.dir}`,
-      "quality:app": `quality-test app --root ${options.dir}`,
-      "quality:gate": `quality-test gate --root ${options.dir}`,
-      "quality:system": `quality-test system --root ${options.dir}`,
-      "quality:summary": `quality-test summary --root ${options.dir}`,
+      "quality:doctor": `test-programme doctor --root ${options.dir}`,
+      "quality:e2e": `test-programme e2e --root ${options.dir}`,
+      "quality:load": `test-programme load --root ${options.dir}`,
+      "quality:app": `test-programme app --root ${options.dir}`,
+      "quality:gate": `test-programme gate --root ${options.dir}`,
+      "quality:system": `test-programme system --root ${options.dir}`,
+      "quality:summary": `test-programme summary --root ${options.dir}`,
     };
     await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
   }
 
   console.log(`Created ${options.dir}.`);
   console.log("Next steps:");
-  console.log(`  npm install -D universal-quality-gate`);
+  console.log(`  npm install -D test-programme`);
   console.log(`  npm run quality:doctor`);
   console.log(`  npm run quality:system`);
 }
