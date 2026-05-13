@@ -1,0 +1,6 @@
+node_modules/
+npm-debug.log*
+.DS_Store
+quality_test/artifacts/
+quality_test/test-results/
+quality_test/playwright-report/
