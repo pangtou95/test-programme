@@ -1,0 +1,43 @@
+name: quality-test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  quality-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify quality runtime
+        run: npm run quality:doctor
+
+      - name: Run quality system
+        run: npm run quality:system
+
+      - name: Print quality summary
+        if: always()
+        run: npm run quality:summary
+
+      - name: Upload quality artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-test-artifacts
+          path: quality_test/artifacts
+          if-no-files-found: warn
