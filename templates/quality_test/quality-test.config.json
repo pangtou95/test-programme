@@ -1,0 +1,100 @@
+{
+  "$schema": "./quality-test.schema.json",
+  "project": {
+    "name": "my-product",
+    "artifactsDir": "quality_test/artifacts"
+  },
+  "web": {
+    "enabled": true,
+    "baseURL": "http://127.0.0.1:3000",
+    "startCommand": "",
+    "serverPort": 3000,
+    "reuseExistingServer": true,
+    "requiredText": "",
+    "maxConsoleErrors": 0,
+    "maxFailedRequests": 0,
+    "maxHorizontalOverflowPx": 2,
+    "budgets": {
+      "domContentLoadedMs": 8000,
+      "loadCompleteMs": 12000,
+      "resourceCount": 120
+    }
+  },
+  "app": {
+    "enabled": false,
+    "targets": [
+      {
+        "name": "ios-smoke",
+        "platform": "ios",
+        "driver": "maestro|detox|appium|xcodebuild|custom",
+        "doctorCommand": "",
+        "installCommand": "",
+        "startCommand": "",
+        "testCommand": "",
+        "artifacts": []
+      },
+      {
+        "name": "android-smoke",
+        "platform": "android",
+        "driver": "maestro|detox|appium|custom",
+        "doctorCommand": "",
+        "installCommand": "",
+        "startCommand": "",
+        "testCommand": "",
+        "artifacts": []
+      },
+      {
+        "name": "desktop-app-smoke",
+        "platform": "desktop",
+        "driver": "electron|playwright|custom",
+        "doctorCommand": "",
+        "installCommand": "",
+        "startCommand": "",
+        "testCommand": "",
+        "artifacts": []
+      }
+    ]
+  },
+  "load": {
+    "baseUrl": "http://127.0.0.1:3000",
+    "startCommand": "",
+    "serverPort": 3000,
+    "reuseExistingServer": true,
+    "endpoints": [
+      {
+        "name": "home",
+        "method": "GET",
+        "path": "/",
+        "weight": 5
+      }
+    ],
+    "profiles": {
+      "smoke": {
+        "durationSeconds": 8,
+        "concurrency": 8,
+        "paceMs": 40,
+        "requestTimeoutMs": 5000,
+        "thresholds": {
+          "minRequests": 40,
+          "successRate": 0.99,
+          "p95Ms": 1000,
+          "p99Ms": 2500,
+          "maxErrorRate": 0.01
+        }
+      },
+      "stress": {
+        "durationSeconds": 30,
+        "concurrency": 32,
+        "paceMs": 10,
+        "requestTimeoutMs": 8000,
+        "thresholds": {
+          "minRequests": 300,
+          "successRate": 0.98,
+          "p95Ms": 1500,
+          "p99Ms": 3500,
+          "maxErrorRate": 0.02
+        }
+      }
+    }
+  }
+}
